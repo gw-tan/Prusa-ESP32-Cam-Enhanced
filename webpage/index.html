@@ -906,9 +906,18 @@ function saveHostname() {
 function saveMdns() {
   const v = document.getElementById('cfg-mdns').value.trim();
   if (!v) return;
-  if (v.length >= 41) { toast('mDNS name too long', 'err'); return; }
+  // RFC 1123 label: ASCII letters, digits, hyphen; no leading/trailing hyphen.
+  // ASCII-only also keeps chars == bytes, matching the firmware's length check.
+  if (!/^[A-Za-z0-9]([A-Za-z0-9-]{0,38}[A-Za-z0-9])?$/.test(v)) {
+    toast('mDNS name: 1-40 letters, digits or hyphens', 'err');
+    return;
+  }
+  // The firmware answers HTTP 200 even when it rejects the name, so the
+  // body has to be checked, not just r.ok.
   fetch('set_mdns?mdns=' + encodeURIComponent(v))
-    .then(() => {
+    .then(r => r.ok ? r.text() : Promise.reject())
+    .then(t => {
+      if (!t.startsWith('Save OK')) throw new Error(t);
       toast('mDNS name saved, reboot to apply', 'ok');
       setText('mdns-preview', v);
     })
