@@ -415,6 +415,14 @@
               <button onclick="saveHostname()" class="px-3 py-2 bg-panel border border-border hover:border-orange text-sub hover:text-orange rounded text-xs font-semibold transition-colors shrink-0">Save</button>
             </div>
           </div>
+          <div>
+            <label for="cfg-mdns" class="text-muted block mb-1.5">mDNS Name</label>
+            <div class="flex gap-2">
+              <input id="cfg-mdns" type="text" maxlength="40" class="flex-1 bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange font-mono text-xs min-w-0" placeholder="prusa-esp32cam">
+              <button onclick="saveMdns()" class="px-3 py-2 bg-panel border border-border hover:border-orange text-sub hover:text-orange rounded text-xs font-semibold transition-colors shrink-0">Save</button>
+            </div>
+            <p class="text-muted mt-2">Device address, e.g. http://<span id="mdns-preview">prusa-esp32cam</span>.local. Takes effect after reboot.</p>
+          </div>
         </div>
       </div>
 
@@ -637,6 +645,8 @@ function applyStatus(d) {
     document.getElementById('cfg-token').value = d.token || '';
     document.getElementById('cfg-refresh').value = d.refreshInterval || 30;
     document.getElementById('cfg-hostname').value = d.hostname || '';
+    document.getElementById('cfg-mdns').value = d.mdns || '';
+    setText('mdns-preview', d.mdns || 'prusa-esp32cam');
     document.getElementById('cfg-ssid').value = d.ssid || '';
     document.getElementById('tl-trigger').value = d.tl_trigger == 1 ? 'printer' : 'manual';
     if (d.tl_max_frames !== undefined) document.getElementById('tl-max-frames').value = d.tl_max_frames;
@@ -891,6 +901,17 @@ function saveHostname() {
   if (!v) return;
   fetch('set_hostname?hostname=' + encodeURIComponent(v))
     .then(() => toast('Hostname saved', 'ok'))
+    .catch(() => toast('Save failed', 'err'));
+}
+function saveMdns() {
+  const v = document.getElementById('cfg-mdns').value.trim();
+  if (!v) return;
+  if (v.length >= 41) { toast('mDNS name too long', 'err'); return; }
+  fetch('set_mdns?mdns=' + encodeURIComponent(v))
+    .then(() => {
+      toast('mDNS name saved, reboot to apply', 'ok');
+      setText('mdns-preview', v);
+    })
     .catch(() => toast('Save failed', 'err'));
 }
 function saveWifi() {
