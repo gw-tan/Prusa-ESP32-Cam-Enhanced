@@ -70,7 +70,7 @@
 #define FW_STATUS_LED_LEVEL_ON      LOW    ///< GPIO pin level for status LED ON
 
 /* --------------- FLASH LED CFG  ---------------*/
-#define ENABLE_CAMERA_FLASH         true    ///< Enable camera flash function
+#define ENABLE_CAMERA_FLASH         false    ///< Enable camera flash function
 #define CAMERA_FLASH_DIGITAL_CTRL   true    ///< Enable camera flash digital control
 #define CAMERA_FLASH_PWM_CTRL       false   ///< Enable camera flash PWM control
 #define CAMERA_FLASH_NEOPIXEL       false   ///< Enable camera flash NeoPixel control
@@ -89,12 +89,12 @@
 #define SD_PIN_DATA0                8       ///< GPIO pin for SD card data 0
 
 /* ---------- RESET CFG CONFIGURATION  ----------*/
-#define CFG_RESET_PIN               2       ///< GPIO 1 is for reset CFG to default. This is button UP+`
+#define CFG_RESET_PIN               0       ///< BOOT button on XIAO ESP32-S3 
 #define CFG_RESET_LED_PIN           21      ///< GPIO for indication of reset CFG
 #define CFG_RESET_LED_LEVEL_ON      LOW     ///< GPIO pin level for status LED ON
 
 /* -------------- STATUS LED CFG ----------------*/
-#define STATUS_LED_ENABLE           true    ///< enable/disable status LED
+#define STATUS_LED_ENABLE           false   ///< Must be false to avoid driving SD CS/DAT3 (GPIO 21)
 #define STATUS_LED_GPIO_NUM         21      ///< GPIO pin for status LED
 #define STATUS_LED_OFF_PIN_LEVEL    LOW    ///< GPIO pin level for status LED ON
 
