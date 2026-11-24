@@ -50,7 +50,7 @@
    downloads — that reusing prusa3d's numbering would imply a correspondence that no
    longer exists. Restarted at 1.0.0 as its own project.
    The release workflow fails the build if a git tag disagrees with this string. */
-#define SW_VERSION                  "1.1.0"                 ///< SW version
+#define SW_VERSION                  "1.2.0"                 ///< SW version
 #define SW_BUILD                    __DATE__ " " __TIME__   ///< build number
 #define CONSOLE_VERBOSE_DEBUG       false                   ///< enable/disable verbose debug log level for console
 #define DEVICE_HOSTNAME             "Prusa-ESP32cam"        ///< device hostname
