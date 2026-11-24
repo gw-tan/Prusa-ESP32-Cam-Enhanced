@@ -353,6 +353,7 @@
       <button role="tab" aria-selected="true" aria-controls="tab-system" class="tab-btn active px-4 py-3 border-b-2 border-transparent text-sub hover:text-text shrink-0 transition-colors" data-tab="system" onclick="switchTab(this)">System</button>
       <button role="tab" aria-selected="false" aria-controls="tab-connect" class="tab-btn px-4 py-3 border-b-2 border-transparent text-sub hover:text-text shrink-0 transition-colors" data-tab="connect" onclick="switchTab(this)">Connect</button>
       <button role="tab" aria-selected="false" aria-controls="tab-wifi" class="tab-btn px-4 py-3 border-b-2 border-transparent text-sub hover:text-text shrink-0 transition-colors" data-tab="wifi" onclick="switchTab(this)">WiFi</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-security" class="tab-btn px-4 py-3 border-b-2 border-transparent text-sub hover:text-text shrink-0 transition-colors" data-tab="security" onclick="switchTab(this)">Security</button>
       <button role="tab" id="tab-btn-tl-files" aria-selected="false" aria-controls="tab-tl-files" class="tab-btn px-4 py-3 border-b-2 border-transparent text-sub hover:text-text shrink-0 transition-colors" data-tab="tl-files" onclick="switchTab(this)">TL Files</button>
       <button role="tab" aria-selected="false" aria-controls="tab-logs" class="tab-btn px-4 py-3 border-b-2 border-transparent text-sub hover:text-text shrink-0 transition-colors" data-tab="logs" onclick="switchTab(this)">Logs</button>
     </div>
@@ -409,19 +410,11 @@
             </div>
           </div>
           <div>
-            <label for="cfg-hostname" class="text-muted block mb-1.5">Hostname</label>
+            <label for="cfg-hostname" class="text-muted block mb-1.5">Prusa Connect Server</label>
             <div class="flex gap-2">
               <input id="cfg-hostname" type="text" class="flex-1 bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange font-mono text-xs min-w-0" placeholder="connect.prusa3d.com">
               <button onclick="saveHostname()" class="px-3 py-2 bg-panel border border-border hover:border-orange text-sub hover:text-orange rounded text-xs font-semibold transition-colors shrink-0">Save</button>
             </div>
-          </div>
-          <div>
-            <label for="cfg-mdns" class="text-muted block mb-1.5">mDNS Name</label>
-            <div class="flex gap-2">
-              <input id="cfg-mdns" type="text" maxlength="40" class="flex-1 bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange font-mono text-xs min-w-0" placeholder="prusa-esp32cam">
-              <button onclick="saveMdns()" class="px-3 py-2 bg-panel border border-border hover:border-orange text-sub hover:text-orange rounded text-xs font-semibold transition-colors shrink-0">Save</button>
-            </div>
-            <p class="text-muted mt-2">Device address, e.g. http://<span id="mdns-preview">prusa-esp32cam</span>.local. Takes effect after reboot.</p>
           </div>
         </div>
       </div>
@@ -440,11 +433,49 @@
           <button onclick="saveWifi()" class="w-full py-2.5 bg-orange hover:bg-orange-dim text-white rounded text-sm font-semibold transition-colors">Save &amp; Reconnect</button>
         </div>
         <div class="bg-panel rounded-lg p-4 border border-border">
+          <label for="cfg-mdns" class="text-muted block mb-1.5">Local Hostname</label>
+          <div class="flex gap-2">
+            <input id="cfg-mdns" type="text" maxlength="40" autocomplete="off" spellcheck="false" class="flex-1 bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange font-mono text-xs min-w-0" placeholder="prusa-esp32cam">
+            <button onclick="saveMdns()" class="px-3 py-2 bg-panel border border-border hover:border-orange text-sub hover:text-orange rounded text-xs font-semibold transition-colors shrink-0">Save</button>
+          </div>
+          <p class="text-muted mt-2">Reachable at http://<span id="mdns-preview" class="font-mono">prusa-esp32cam</span>.local and listed under this name on your router. Letters, digits and hyphens. Takes effect after reboot.</p>
+        </div>
+        <div class="bg-panel rounded-lg p-4 border border-border">
           <div class="flex justify-between items-center mb-3">
             <span class="text-muted">Nearby Networks</span>
             <button onclick="scanWifi()" class="px-3 py-1.5 bg-panel border border-border hover:border-orange text-sub hover:text-orange rounded text-xs font-semibold transition-colors">Scan</button>
           </div>
           <div id="wifi-networks" class="space-y-1 text-sub">Press Scan to search.</div>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div role="tabpanel" id="tab-security" class="tab-pane hidden space-y-3">
+        <div class="bg-panel rounded-lg p-4 border border-border space-y-4">
+          <div class="flex items-center justify-between py-1">
+            <div>
+              <p class="text-sm text-text">Require login</p>
+              <p class="text-xs text-muted">Currently: <span id="auth-state">--</span></p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="auth-enable" aria-label="Require login">
+              <span class="sl"></span>
+            </label>
+          </div>
+          <div>
+            <label for="auth-user" class="text-muted block mb-1.5">Username</label>
+            <input id="auth-user" type="text" maxlength="10" autocomplete="username" spellcheck="false" class="w-full bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange text-sm" placeholder="admin">
+          </div>
+          <div>
+            <label for="auth-pass" class="text-muted block mb-1.5">New Password</label>
+            <input id="auth-pass" type="password" maxlength="20" autocomplete="new-password" class="w-full bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange text-sm" placeholder="Leave blank to keep current">
+          </div>
+          <div>
+            <label for="auth-pass2" class="text-muted block mb-1.5">Confirm Password</label>
+            <input id="auth-pass2" type="password" maxlength="20" autocomplete="new-password" class="w-full bg-base border border-border rounded px-3 py-2 text-text focus:outline-none focus:border-orange text-sm">
+          </div>
+          <button onclick="saveAuth()" class="w-full py-2.5 bg-orange hover:bg-orange-dim text-white rounded text-sm font-semibold transition-colors">Save</button>
+          <p class="text-xs text-muted">Protects this page, the stream, snapshots, timelapse files and every setting with HTTP Basic auth; your browser asks for the username and password. It is sent unencrypted over the local network, so do not reuse an important password. Username up to 10 characters (no colon), password up to 20. Forgot it? A factory reset clears it.</p>
         </div>
       </div>
 
@@ -594,6 +625,8 @@ function applyStatus(d) {
   setText('sys-mcu-temp', d.mcu_temp ? d.mcu_temp + ' °C' : '--');
   setText('sys-ip', d.ip || '--');
   setText('sys-mdns', d.mdns || '--');
+  S.authOn = d.auth == true || d.auth === 'true';
+  setText('auth-state', S.authOn ? 'enabled for ' + (d.auth_username || '?') : 'disabled — anyone on the network can open this page');
   setText('sys-ssid', d.ssid || '--');
   setText('sys-rssi', d.rssi ? d.rssi + ' dBm (' + (d.rssi_percentage || '?') + '%)' : '--');
   setText('sys-upload', d.last_upload_status || '--');
@@ -647,6 +680,8 @@ function applyStatus(d) {
     document.getElementById('cfg-hostname').value = d.hostname || '';
     document.getElementById('cfg-mdns').value = d.mdns || '';
     setText('mdns-preview', d.mdns || 'prusa-esp32cam');
+    document.getElementById('auth-enable').checked = d.auth == true || d.auth === 'true';
+    document.getElementById('auth-user').value = d.auth_username || '';
     document.getElementById('cfg-ssid').value = d.ssid || '';
     document.getElementById('tl-trigger').value = d.tl_trigger == 1 ? 'printer' : 'manual';
     if (d.tl_max_frames !== undefined) document.getElementById('tl-max-frames').value = d.tl_max_frames;
@@ -905,23 +940,63 @@ function saveHostname() {
 }
 function saveMdns() {
   const v = document.getElementById('cfg-mdns').value.trim();
-  if (!v) return;
   // RFC 1123 label: ASCII letters, digits, hyphen; no leading/trailing hyphen.
-  // ASCII-only also keeps chars == bytes, matching the firmware's length check.
+  // The same name is used for mDNS and the DHCP hostname, and the firmware
+  // enforces the same rule. ASCII-only also keeps chars == bytes.
   if (!/^[A-Za-z0-9]([A-Za-z0-9-]{0,38}[A-Za-z0-9])?$/.test(v)) {
-    toast('mDNS name: 1-40 letters, digits or hyphens', 'err');
+    toast('Hostname: 1-40 letters, digits or hyphens', 'err');
     return;
   }
-  // The firmware answers HTTP 200 even when it rejects the name, so the
-  // body has to be checked, not just r.ok.
   fetch('set_mdns?mdns=' + encodeURIComponent(v))
-    .then(r => r.ok ? r.text() : Promise.reject())
-    .then(t => {
-      if (!t.startsWith('Save OK')) throw new Error(t);
-      toast('mDNS name saved, reboot to apply', 'ok');
+    .then(r => r.text().then(t => {
+      if (!r.ok || !t.startsWith('Save OK')) throw new Error(t);
+    }))
+    .then(() => {
       setText('mdns-preview', v);
+      if (confirm('Hostname saved. Reboot now to apply it?\nThe device will then be at http://' + v + '.local')) {
+        fetch('/action_reboot')
+          .then(() => toast('Rebooting…', 'warn'))
+          .catch(() => toast('Reboot failed', 'err'));
+      } else {
+        toast('Hostname saved, reboot to apply', 'ok');
+      }
     })
-    .catch(() => toast('Save failed', 'err'));
+    .catch(e => toast((e && e.message) || 'Save failed', 'err'));
+}
+function saveAuth() {
+  const en = document.getElementById('auth-enable').checked;
+  const u  = document.getElementById('auth-user').value.trim();
+  const p  = document.getElementById('auth-pass').value;
+  const p2 = document.getElementById('auth-pass2').value;
+  // Mirrors Server_IsValidAuthString(): printable ASCII, and no ':' in the
+  // username because Basic auth splits "user:pass" on the first colon.
+  if (!/^[\x20-\x39\x3B-\x7E]{1,10}$/.test(u)) { toast('Username: 1-10 characters, no colon', 'err'); return; }
+  if (p && !/^[\x20-\x7E]{1,20}$/.test(p))       { toast('Password: up to 20 plain characters', 'err'); return; }
+  if (p !== p2)                                  { toast('Passwords do not match', 'err'); return; }
+  // Turning login on without choosing a password would silently protect the
+  // page with whatever is stored, which on a fresh device is the factory default.
+  if (en && !S.authOn && !p)                     { toast('Choose a password to enable login', 'err'); return; }
+
+  let q = 'basicauth_cfg?auth_enable=' + en + '&auth_username=' + encodeURIComponent(u);
+  if (p) q += '&auth_password=' + encodeURIComponent(p);
+  fetch(q)
+    .then(r => r.text().then(t => {
+      if (!r.ok || !t.startsWith('Save cfg OK')) throw new Error(t.replace(/^Save cfg NOT OK!\s*/, '') || 'Save failed');
+    }))
+    .then(() => {
+      document.getElementById('auth-pass').value = '';
+      document.getElementById('auth-pass2').value = '';
+      if (en) {
+        // The browser's cached credentials are now stale (or there are none
+        // yet). Reload so it asks once, cleanly, instead of on a background poll.
+        toast('Login saved — sign in with the new credentials', 'ok');
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        toast('Login disabled', 'ok');
+        fetchStatus();
+      }
+    })
+    .catch(e => toast((e && e.message) || 'Save failed', 'err'));
 }
 function saveWifi() {
   const s = document.getElementById('cfg-ssid').value.trim();

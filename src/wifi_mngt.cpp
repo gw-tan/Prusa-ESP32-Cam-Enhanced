@@ -66,6 +66,17 @@ void WiFiMngt::Init() {
   SetWifiEvents();
   CreateApSsid();
 
+  /* Local hostname. The mDNS name doubles as the DHCP hostname, so the device
+     shows up under the same name in the router's client list as it answers to
+     on <name>.local. It must be set before WiFi.mode(): the STA netif takes the
+     hostname when it is created, and the old fixed DEVICE_HOSTNAME call sat
+     after mode(), where it is too late to reach the DHCP request.
+     A stored name that is not a valid label (blank or pre-validation EEPROM)
+     falls back to DEVICE_HOSTNAME rather than handing DHCP garbage. */
+  String hostname = IsValidHostname(mDNS_record, EEPROM_ADDR_MDNS_RECORD_LENGTH - 1) ? mDNS_record : String(DEVICE_HOSTNAME);
+  log->AddEvent(LogLevel_Info, "Hostname: " + hostname);
+  WiFi.setHostname(hostname.c_str());
+
   /* check enable service AP mode */
   if (true == GetEnableServiceAp()) {
     log->AddEvent(LogLevel_Info, F("Service AP mode enabled"));
@@ -95,7 +106,6 @@ void WiFiMngt::Init() {
   log->AddEvent(LogLevel_Info, "WiFi MAC: " + WiFi.macAddress());
 
   esp_wifi_set_ps(WIFI_PS_NONE);
-  WiFi.setHostname(DEVICE_HOSTNAME);
   FirstConnected = false;
   //WiFi.setTxPower(WIFI_POWER_18_5dBm);
 
@@ -123,8 +133,8 @@ void WiFiMngt::Init() {
   TaskAp_previousMillis = millis();
 
   /* Init MDNS record */
-  log->AddEvent(LogLevel_Info, "Starting mDNS record: http://" + mDNS_record + ".local");
-  if (!MDNS.begin(mDNS_record)) {
+  log->AddEvent(LogLevel_Info, "Starting mDNS record: http://" + hostname + ".local");
+  if (!MDNS.begin(hostname.c_str())) {
     log->AddEvent(LogLevel_Error, F("Error starting mDNS"));
   } else {
     log->AddEvent(LogLevel_Info, F("Starting mDNS OK"));
@@ -778,6 +788,28 @@ String WiFiMngt::GetWifiMac() {
 */
 String WiFiMngt::GetMdns() {
   return mDNS_record;
+}
+
+/**
+   @brief Check a local hostname: one RFC 1123 label, usable both as the mDNS
+          name and as the DHCP hostname
+   @param String - name
+   @param size_t - maximum length
+   @return bool - true when 1..max ASCII letters, digits or hyphens, with no
+                  leading or trailing hyphen
+*/
+bool WiFiMngt::IsValidHostname(const String &i_data, size_t i_max) {
+  size_t len = i_data.length();
+  if ((len == 0) || (len > i_max))
+    return false;
+  if ((i_data.charAt(0) == '-') || (i_data.charAt(len - 1) == '-'))
+    return false;
+  for (size_t i = 0; i < len; i++) {
+    char c = i_data.charAt(i);
+    if (!(isalnum((unsigned char)c) || (c == '-')))
+      return false;
+  }
+  return true;
 }
 
 /**

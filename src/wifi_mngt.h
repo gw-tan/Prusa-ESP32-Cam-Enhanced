@@ -143,6 +143,8 @@ public:
   void SetFirstConnection(bool);
   void SetNetworkConfig(String, String, String, String);
   void SetNetIpMethod(uint8_t);
+
+  static bool IsValidHostname(const String &, size_t);
 };
 
 extern WiFiMngt SystemWifiMngt;   ///< global variable for wifi management
