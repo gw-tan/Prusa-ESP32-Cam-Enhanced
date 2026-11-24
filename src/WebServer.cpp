@@ -364,6 +364,7 @@ void Server_InitWebServer_Actions() {
 
   /* /action_sderase — backing task was removed; return 501 so callers fail loudly */
   server.on("/action_sderase", HTTP_GET, [](AsyncWebServerRequest* request) {
+    if (Server_CheckBasicAuth(request) == false) return;
     request->send(501, F("text/plain"), "Not implemented");
   });
 }
@@ -754,79 +755,100 @@ void Server_InitWebServer_Sets() {
   });
 
 
-  /* route for set basic auth */
-  server.on("/basicauth_cfg", HTTP_GET, [](AsyncWebServerRequest* request) {
-    SystemLog.AddEvent(LogLevel_Verbose, F("WEB server: set basic auth user name and password"));
-    bool ret = false;
-    String ret_msg = "";
+  /* route for set basic auth
+     /basicauth_cfg?auth_enable=true|false&auth_username=<u>[&auth_password=<p>]
 
+     Everything is validated before anything is applied, so a rejected request
+     changes nothing. The old handler copied each value into WebBasicAuth before
+     checking it, so an over-long password failed to save but was still live in
+     RAM until the next reboot, and the user was locked out by a password that
+     was never stored.
+
+     An empty or absent password keeps the stored one, so the SPA never has to
+     send (or know) the current password just to change the username or toggle
+     auth. Enabling auth with no password stored is refused: it would lock the
+     page behind credentials nobody chose. */
+  server.on("/basicauth_cfg", HTTP_GET, [](AsyncWebServerRequest* request) {
+    SystemLog.AddEvent(LogLevel_Verbose, F("WEB server: /basicauth_cfg"));
     if (Server_CheckBasicAuth(request) == false)
       return;
 
-    /* get username */
+    bool enable = WebBasicAuth.EnableAuth;
+    String user = WebBasicAuth.UserName;
+    String pass = WebBasicAuth.Password;
+    String err = "";
+
     if (request->hasParam("auth_username")) {
-      WebBasicAuth.UserName = request->getParam("auth_username")->value();
-
-      /* check min and max length  */
-      if ((WebBasicAuth.UserName.length() > 0) && (WebBasicAuth.UserName.length() < EEPROM_ADDR_BASIC_AUTH_USERNAME_LENGTH)) {
-        SystemConfig.SaveBasicAuthUsername(WebBasicAuth.UserName);
-        ret = true;
-      } else {
-        ret = false;
-        ret_msg = "Maximum username length: " + String(EEPROM_ADDR_BASIC_AUTH_USERNAME_LENGTH);
+      user = request->getParam("auth_username")->value();
+      if (!Server_IsValidAuthString(user, EEPROM_ADDR_BASIC_AUTH_USERNAME_LENGTH - 1, true)) {
+        err = "Username: 1-" + String(EEPROM_ADDR_BASIC_AUTH_USERNAME_LENGTH - 1) + " printable characters, no ':'";
       }
     }
 
-    /* get password */
-    if (request->hasParam("auth_password")) {
-      WebBasicAuth.Password = request->getParam("auth_password")->value();
-
-      /* check min and max length  */
-      if ((WebBasicAuth.Password.length() > 0) && (WebBasicAuth.Password.length() < EEPROM_ADDR_BASIC_AUTH_PASSWORD_LENGTH)) {
-        SystemConfig.SaveBasicAuthPassword(WebBasicAuth.Password);
-        ret = true;
-      } else {
-        ret = false;
-        ret_msg = "Maximum password length: " + String(EEPROM_ADDR_BASIC_AUTH_PASSWORD_LENGTH);
+    if (err.isEmpty() && request->hasParam("auth_password")) {
+      String tmp = request->getParam("auth_password")->value();
+      if (tmp.length() > 0) {
+        if (Server_IsValidAuthString(tmp, EEPROM_ADDR_BASIC_AUTH_PASSWORD_LENGTH - 1, false)) {
+          pass = tmp;
+        } else {
+          err = "Password: 1-" + String(EEPROM_ADDR_BASIC_AUTH_PASSWORD_LENGTH - 1) + " printable characters";
+        }
       }
     }
 
-    /* get enable / disable we bauth */
-    if (request->hasParam("basicauth_enable")) {
-      WebBasicAuth.EnableAuth = Server_TransfeStringToBool(request->getParam("basicauth_enable")->value());
-      SystemConfig.SaveBasicAuthFlag(WebBasicAuth.EnableAuth);
-      ret = true;
+    /* accept the legacy parameter name as well */
+    const char* enable_param = request->hasParam("auth_enable") ? "auth_enable" : "basicauth_enable";
+    if (err.isEmpty() && request->hasParam(enable_param)) {
+      enable = Server_TransfeStringToBool(request->getParam(enable_param)->value());
     }
 
-    /* send OK response */
-    if (true == ret) {
-      request->send(200, F("text/html"), MSG_SAVE_OK);
-
-    } else {
-      String msg = MSG_SAVE_NOTOK;
-      msg += " " + ret_msg;
-      request->send(200, F("text/html"), msg.c_str());
+    if (err.isEmpty() && enable && (user.isEmpty() || pass.isEmpty())) {
+      err = "Set a username and password before enabling login";
     }
+
+    if (!err.isEmpty()) {
+      SystemLog.AddEvent(LogLevel_Warning, "Basic auth cfg rejected: " + err);
+      request->send(400, F("text/plain"), String(MSG_SAVE_NOTOK) + " " + err);
+      return;
+    }
+
+    if (user != WebBasicAuth.UserName) {
+      WebBasicAuth.UserName = user;
+      SystemConfig.SaveBasicAuthUsername(user);
+    }
+    if (pass != WebBasicAuth.Password) {
+      WebBasicAuth.Password = pass;
+      SystemConfig.SaveBasicAuthPassword(pass);
+    }
+    if (enable != WebBasicAuth.EnableAuth) {
+      WebBasicAuth.EnableAuth = enable;
+      SystemConfig.SaveBasicAuthFlag(enable);
+    }
+    SystemLog.AddEvent(LogLevel_Info, "Web login " + String(enable ? "enabled" : "disabled") + ", user: " + user);
+    request->send(200, F("text/plain"), MSG_SAVE_OK);
   });
 
 
-  /* route for set firmware size */
+  /* route for set local hostname (mDNS name + DHCP hostname) /set_mdns?mdns=<name>
+     The same name is used for both, so it has to be a valid RFC 1123 label —
+     a router will not register "my cam" or "cam.local" as a DHCP hostname. */
   server.on("/set_mdns", HTTP_GET, [](AsyncWebServerRequest* request) {
     SystemLog.AddEvent(LogLevel_Verbose, F("WEB server: /set_mdns"));
     if (Server_CheckBasicAuth(request) == false)
       return;
 
-    /* check cfg for mdns */
-    if (request->hasParam("mdns")) {
-      String tmp = request->getParam("mdns")->value();
-      if (tmp.length() < EEPROM_ADDR_MDNS_RECORD_LENGTH) {
-        request->send(200, F("text/html"), MSG_SAVE_OK_REBOOT);
-        SystemWifiMngt.SetMdns(tmp);
-
-      } else {
-        String msg = "Error save mDNS. Maximum length: " + String(EEPROM_ADDR_MDNS_RECORD_LENGTH);
-        request->send(200, F("text/html"), msg.c_str());
-      }
+    if (!request->hasParam("mdns")) {
+      request->send(400, F("text/plain"), "Missing mdns parameter");
+      return;
+    }
+    String tmp = request->getParam("mdns")->value();
+    if (WiFiMngt::IsValidHostname(tmp, EEPROM_ADDR_MDNS_RECORD_LENGTH - 1)) {
+      SystemWifiMngt.SetMdns(tmp);
+      request->send(200, F("text/plain"), MSG_SAVE_OK_REBOOT);
+    } else {
+      String msg = "Error save hostname. Use 1-" + String(EEPROM_ADDR_MDNS_RECORD_LENGTH - 1) +
+                   " letters, digits or hyphens, not starting or ending with a hyphen";
+      request->send(400, F("text/plain"), msg);
     }
   });
 }
@@ -1046,11 +1068,36 @@ bool Server_CheckBasicAuth(AsyncWebServerRequest* request) {
 }
 
 /**
+   @brief Validate a basic-auth username or password
+   @param String - value
+   @param size_t - maximum length in bytes
+   @param bool - true for a username, which may not contain ':' (RFC 7617 splits
+                 "user:pass" on the first colon, so such a user could never log in)
+   @return bool - true when the value is 1..max printable ASCII characters
+*/
+bool Server_IsValidAuthString(const String& i_data, size_t i_max, bool i_username) {
+  if ((i_data.length() == 0) || (i_data.length() > i_max))
+    return false;
+  for (size_t i = 0; i < i_data.length(); i++) {
+    char c = i_data.charAt(i);
+    if ((c < 0x20) || (c > 0x7E))
+      return false;
+    if (i_username && (c == ':'))
+      return false;
+  }
+  return true;
+}
+
+/**
    @brief Stream JPG image from camera
    @param AsyncWebServerRequest - request
    @return void
 */
 void Server_streamJpg(AsyncWebServerRequest* request) {
+  /* The stream was the one route that skipped the login check, so enabling auth
+     still left the live camera view open to the whole LAN. */
+  if (Server_CheckBasicAuth(request) == false)
+    return;
   AsyncJpegStreamResponse* response = new AsyncJpegStreamResponse(&SystemCamera, &SystemLog);
   if (!response) {
     request->send(501);

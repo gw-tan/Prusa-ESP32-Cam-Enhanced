@@ -52,6 +52,7 @@ void Server_handleCacheRequest(AsyncWebServerRequest*, const char*, const char*)
 void Server_handleNotFound(AsyncWebServerRequest *);
 String Server_GetJsonData();
 bool Server_CheckBasicAuth(AsyncWebServerRequest *);
+bool Server_IsValidAuthString(const String &, size_t, bool);
 
 void Server_streamJpg(AsyncWebServerRequest *);
 

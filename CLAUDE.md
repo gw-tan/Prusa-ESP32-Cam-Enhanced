@@ -173,6 +173,19 @@ Polls the local PrusaLink API to detect print job state changes. When trigger mo
 
 All web handlers run in the ESPAsyncTCP task context (still Core 0).
 
+**Login (HTTP Basic auth)** is configured from the SPA's Security tab via
+`/basicauth_cfg?auth_enable=&auth_username=[&auth_password=]`. Every route,
+including `/stream.mjpg`, calls `Server_CheckBasicAuth()` — keep it that way for new
+routes. The handler validates everything before applying anything (a half-applied
+change can lock the user out), keeps the stored password when none is sent (the
+password is never returned in `json_input`), and refuses to enable login with no
+password. Usernames may not contain `:` (RFC 7617 splits on it).
+
+**Local hostname**: the mDNS name (`/set_mdns`, WiFi tab) is also the DHCP hostname.
+`WiFi.setHostname()` must run *before* `WiFi.mode()` in `WiFiMngt::Init()` or it
+never reaches DHCP. Both firmware and SPA restrict it to one RFC 1123 label;
+`DEVICE_HOSTNAME` is the fallback for an invalid stored value. Applies on reboot.
+
 ### Web UI — `webpage/index.html`
 
 The web UI is a **single-page app** (`webpage/index.html`) — HTML + Tailwind + vanilla JS, all inline.
